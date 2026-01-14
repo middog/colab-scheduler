@@ -1,0 +1,141 @@
+name: 🔧 Maintenance Request
+description: Report equipment issues or facility maintenance needs
+title: "[Maintenance]: "
+labels: ["type:maintenance", "fire:fuel", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔧 Maintenance Request
+        Report equipment issues, facility maintenance needs, or resource problems.
+        
+        ⚠️ **Safety First**: If equipment poses an immediate safety hazard, please also notify a steward directly!
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request Type
+      description: What kind of maintenance is needed?
+      options:
+        - 🔴 Equipment Broken - Not functional
+        - 🟠 Equipment Degraded - Works but impaired
+        - 🟡 Preventive Maintenance - Scheduled service needed
+        - 🔵 Calibration Required - Needs adjustment
+        - 🟢 Consumables Low - Supplies needed
+        - ⚪ Facility Issue - Space/infrastructure problem
+    validations:
+      required: true
+
+  - type: dropdown
+    id: resource
+    attributes:
+      label: Affected Resource
+      description: Which tool, equipment, or space is affected?
+      options:
+        - "--- TOOLS ---"
+        - Laser Cutter
+        - 3D Printer (FDM)
+        - 3D Printer (Resin)
+        - CNC Router
+        - Vinyl Cutter
+        - Embroidery Machine
+        - Sewing Machine
+        - Soldering Station
+        - Electronics Workbench
+        - Hand Tools
+        - Power Tools
+        - "--- SPACES ---"
+        - Main Workshop
+        - Electronics Lab
+        - Textiles Area
+        - Finishing Room
+        - Storage Area
+        - "--- OTHER ---"
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: input
+    id: resource-other
+    attributes:
+      label: Other Resource
+      description: If you selected "Other", specify the resource here
+      placeholder: e.g., Oscilloscope Model XYZ
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: Describe the problem in detail
+      placeholder: |
+        What is wrong? When did you first notice it?
+        
+        Any error messages, unusual sounds, or visible damage?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How urgent is this maintenance?
+      options:
+        - 🔴 Critical - Safety hazard or complete failure
+        - 🟠 High - Major impact on operations
+        - 🟡 Medium - Degraded but usable
+        - 🟢 Low - Minor issue, can wait
+    validations:
+      required: true
+
+  - type: dropdown
+    id: availability
+    attributes:
+      label: Equipment Availability
+      description: Is the equipment still usable?
+      options:
+        - "🔴 OUT OF SERVICE - Do not use"
+        - "🟡 LIMITED USE - Works with restrictions"
+        - "🟢 OPERATIONAL - Minor issue only"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: How does this affect members and operations?
+      placeholder: |
+        - Who is affected?
+        - Are there upcoming bookings that will be impacted?
+        - Is there a workaround?
+
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos / Documentation
+      description: Add photos showing the issue if applicable
+      placeholder: Drag/drop images here
+
+  - type: input
+    id: reporter-contact
+    attributes:
+      label: Your Contact Info
+      description: How can we reach you for follow-up questions?
+      placeholder: e.g., Slack @username or email
+
+  - type: checkboxes
+    id: actions-taken
+    attributes:
+      label: Actions Already Taken
+      description: Check any that apply
+      options:
+        - label: I have tagged the equipment as out of service
+        - label: I have notified a steward
+        - label: I have warned other members in Slack
+        - label: I have checked if consumables need restocking
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information (recent usage, error codes, etc.)

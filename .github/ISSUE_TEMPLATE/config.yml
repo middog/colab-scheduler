@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/YOUR_ORG/colab-scheduler/tree/main/docs
+    about: Check the docs before submitting an issue
+  - name: 💬 Discussions
+    url: https://github.com/YOUR_ORG/colab-scheduler/discussions
+    about: Ask questions and share ideas with the community
+  - name: 📅 Book Equipment
+    url: https://dev.sdcolab.mid.dog
+    about: Use the scheduler to book tools and spaces

@@ -1,0 +1,115 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["type:feature", "fire:heat", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ Feature Request
+        Have an idea to make SDCoLab Scheduler better? We'd love to hear it!
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What area does this feature relate to?
+      options:
+        - Booking & Scheduling
+        - User Management & Auth
+        - Resource/Tool Management
+        - Certifications & Training
+        - Calendar Integration
+        - GitHub Integration
+        - Notifications & Alerts
+        - Analytics & Reporting
+        - Admin Tools
+        - Mobile Experience
+        - Accessibility
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Who benefits?
+      placeholder: |
+        As a [type of user], I want [goal] so that [benefit].
+        
+        Currently, I have to [current workaround]...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: |
+        I would like to see...
+        
+        This could work by...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested Priority
+      description: How important is this feature to you?
+      options:
+        - 🔴 Critical - Blocking adoption/usage
+        - 🟠 High - Significantly improves experience
+        - 🟡 Medium - Nice to have, would help
+        - 🟢 Low - Minor improvement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated Effort
+      description: How complex do you think this is?
+      options:
+        - Small - Quick win, few hours
+        - Medium - A few days of work
+        - Large - Week+ of work
+        - Unknown - Not sure
+
+  - type: checkboxes
+    id: fire-triangle
+    attributes:
+      label: "🔥 Fire Triangle Classification"
+      description: Which layer does this feature serve?
+      options:
+        - label: "🟡 FUEL (infrastructure, tools, resources)"
+          required: false
+        - label: "🔵 OXYGEN (process, governance, docs)"
+          required: false
+        - label: "🔴 HEAT (community, events, engagement)"
+          required: false
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Examples
+      description: Any sketches, screenshots from other tools, or examples?
+      placeholder: Drag/drop images or paste links here
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to help with this feature?
+      options:
+        - label: I would be willing to submit a PR for this feature
+        - label: I can help test this feature
+        - label: I can help document this feature

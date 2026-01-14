@@ -1,0 +1,157 @@
+name: 🔑 Access Request
+description: Request certification, training, or access to equipment
+title: "[Access]: "
+labels: ["type:access", "fire:oxygen", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔑 Access Request
+        Request certification, training, or access privileges for equipment and spaces.
+        
+        📋 Most equipment requires certification before use. This form helps us track and schedule training.
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request Type
+      description: What type of access are you requesting?
+      options:
+        - 🎓 New Certification - First-time training
+        - 🔄 Recertification - Renewal of existing cert
+        - ⬆️ Upgrade - Advanced/unsupervised access
+        - 👥 Group Training - Schedule training session
+        - 🔓 Special Access - After-hours or restricted area
+    validations:
+      required: true
+
+  - type: dropdown
+    id: resource
+    attributes:
+      label: Equipment / Resource
+      description: What do you need access to?
+      multiple: true
+      options:
+        - "--- HIGH SUPERVISION ---"
+        - Laser Cutter
+        - CNC Router
+        - Metal Lathe
+        - Welding Equipment
+        - "--- MEDIUM SUPERVISION ---"
+        - 3D Printer (FDM)
+        - 3D Printer (Resin)
+        - Table Saw
+        - Band Saw
+        - Drill Press
+        - "--- LOW SUPERVISION ---"
+        - Vinyl Cutter
+        - Embroidery Machine
+        - Sewing Machines
+        - Soldering Station
+        - Hand Tools
+        - "--- SPACES ---"
+        - Electronics Lab
+        - Woodshop
+        - Metal Shop
+        - Textiles Area
+        - After-Hours Access
+    validations:
+      required: true
+
+  - type: textarea
+    id: experience
+    attributes:
+      label: Relevant Experience
+      description: Describe any prior experience with this equipment or similar tools
+      placeholder: |
+        - Have you used this type of equipment before?
+        - Any formal training or certifications from other spaces?
+        - How long have you been a member?
+    validations:
+      required: true
+
+  - type: textarea
+    id: project
+    attributes:
+      label: Project / Use Case
+      description: What do you plan to make or do with this access?
+      placeholder: |
+        I'm working on...
+        
+        I need this equipment to...
+
+  - type: dropdown
+    id: availability
+    attributes:
+      label: Training Availability
+      description: When are you generally available for training?
+      multiple: true
+      options:
+        - Weekday mornings
+        - Weekday afternoons
+        - Weekday evenings
+        - Saturday
+        - Sunday
+        - Flexible
+    validations:
+      required: true
+
+  - type: input
+    id: preferred-dates
+    attributes:
+      label: Preferred Dates
+      description: Any specific dates that work well for you?
+      placeholder: e.g., "Any Tuesday in February" or "Feb 15-20"
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How soon do you need this access?
+      options:
+        - 🔴 Urgent - Active project blocked
+        - 🟠 Soon - Within 2 weeks
+        - 🟡 Normal - Within a month
+        - 🟢 Flexible - Whenever available
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following
+      options:
+        - label: I have completed general shop orientation
+          required: true
+        - label: I have read the equipment manual/documentation
+        - label: I understand this equipment requires supervision until certified
+        - label: I agree to follow all safety procedures
+
+  - type: input
+    id: member-info
+    attributes:
+      label: Member Name
+      description: Your name as it appears in the scheduler
+      placeholder: Your full name
+    validations:
+      required: true
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact
+      description: Best way to reach you for scheduling
+      placeholder: e.g., Slack @username, email, phone
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Notes
+      description: Anything else we should know?
+      placeholder: |
+        - Accessibility needs
+        - Scheduling constraints
+        - Questions about the certification process
