@@ -1,0 +1,596 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  FileCode, Copy, Download, CheckCircle, RefreshCw,
+  Wrench, DoorOpen, AlertCircle
+} from 'lucide-react';
+import { api } from '../lib/api.js';
+
+/**
+ * TemplateGenerator - Admin tool to generate YAML issue templates
+ * 
+ * Generates GitHub issue template YAML with current tools/rooms
+ * from the scheduler configuration.
+ * 
+ * 🔥 Fire Triangle: OXYGEN layer - governance tooling
+ * 
+ * @version 4.2.0-rc69.11
+ */
+
+const TemplateGenerator = ({ token, theme = 'light', showMessage }) => {
+  const [templateType, setTemplateType] = useState('maintenance');
+  const [yaml, setYaml] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [tools, setTools] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [includeTools, setIncludeTools] = useState(true);
+  const [includeRooms, setIncludeRooms] = useState(true);
+  
+  const isDark = theme === 'dark';
+  
+  const templateTypes = [
+    { id: 'maintenance', name: '🔧 Maintenance Request', fire: 'fuel' },
+    { id: 'access', name: '🔑 Access Request', fire: 'oxygen' },
+    { id: 'bug', name: '🐛 Bug Report', fire: 'fuel' },
+    { id: 'feature', name: '✨ Feature Request', fire: 'heat' }
+  ];
+  
+  // Load tools and rooms on mount
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        const [toolsData, roomsData] = await Promise.all([
+          api('/resources/tools').catch(() => ({ tools: [] })),
+          api('/resources/rooms').catch(() => ({ rooms: [] }))
+        ]);
+        setTools(toolsData.tools || []);
+        setRooms(roomsData.rooms || []);
+      } catch (err) {
+        console.error('Failed to load resources:', err);
+      }
+    };
+    loadResources();
+  }, []);
+  
+  const generateTemplate = async () => {
+    setLoading(true);
+    
+    try {
+      // Try to fetch from backend first
+      const data = await api(`/github/templates/generate?type=${templateType}`);
+      setYaml(data.yaml);
+    } catch (err) {
+      // Fall back to local generation
+      generateLocally();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const generateLocally = () => {
+    const toolOptions = includeTools 
+      ? tools.map(t => `        - "${t.name}"`).join('\n')
+      : '';
+    const roomOptions = includeRooms
+      ? rooms.map(r => `        - "${r.name}"`).join('\n')
+      : '';
+    
+    let generated = '';
+    
+    switch (templateType) {
+      case 'maintenance':
+        generated = `name: 🔧 Maintenance Request
+description: Report equipment or facility maintenance needs
+title: "[Maintenance]: "
+labels: ["maintenance", "status:new", "fire:fuel"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Equipment/Facility Maintenance Request
+        Report issues with tools, equipment, or facility infrastructure.
+        
+        ⚠️ **Safety First**: If this is an urgent safety issue, please also notify a steward directly.
+
+  - type: dropdown
+    id: equipment
+    attributes:
+      label: Equipment/Resource
+      description: Which equipment or area needs attention?
+      options:
+${toolOptions}
+        - "General Facility"
+        - "HVAC/Climate"
+        - "Lighting"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: location
+    attributes:
+      label: Location
+      description: Where is this equipment located?
+      options:
+${roomOptions}
+        - "Common Area"
+        - "Restroom"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: Describe the problem in detail
+      placeholder: "The equipment is showing... / not working properly because..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this issue?
+      options:
+        - "🟢 Low - Cosmetic or minor issue"
+        - "🟡 Medium - Degraded functionality"
+        - "🟠 High - Equipment unusable"
+        - "🔴 Critical - Safety hazard"
+      default: 1
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety Assessment
+      description: Please check any that apply
+      options:
+        - label: "⚠️ This is a potential safety hazard"
+        - label: "🔒 Equipment should be locked out until repaired"
+        - label: "👥 Other users have been warned"
+
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos/Evidence
+      description: Upload photos showing the issue if possible
+      placeholder: Drag and drop images here...
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        🔥 *Fire Triangle: This request relates to **FUEL** (physical resources & equipment)*
+        
+        *Generated by SDCoLab Scheduler Template Generator*
+`;
+        break;
+        
+      case 'access':
+        const certTools = tools.filter(t => t.requiresCert);
+        const certOptions = certTools.length > 0
+          ? certTools.map(t => `        - "${t.name}"`).join('\n')
+          : '        - "Equipment requiring certification"';
+        
+        generated = `name: 🔑 Access Request
+description: Request certification or access to restricted equipment
+title: "[Access]: "
+labels: ["access-request", "status:new", "fire:oxygen"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Certification / Access Request
+        Request access to equipment that requires certification or special authorization.
+        
+        📋 **Process**: Your request will be reviewed by stewards. You may need to complete training before access is granted.
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request Type
+      description: What type of access are you requesting?
+      options:
+        - "Initial Certification - New equipment access"
+        - "Certification Renewal - Expired certification"
+        - "Upgrade - Advanced/additional permissions"
+        - "After-Hours Access - Extended facility access"
+        - "Guest/Visitor Access - Temporary access for guest"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: equipment
+    attributes:
+      label: Equipment/Area
+      description: Which equipment or area do you need access to?
+      multiple: true
+      options:
+${certOptions}
+        - "After-Hours Building Access"
+        - "Key/Fob Access"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Justification
+      description: Why do you need this access? Describe your intended use.
+      placeholder: "I need access to complete... / My project requires..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: experience
+    attributes:
+      label: Relevant Experience
+      description: Describe your experience with this type of equipment
+      placeholder: "I have X years of experience with... / I've used similar equipment at..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites Completed
+      description: Check any training or prerequisites you've completed
+      options:
+        - label: "General safety orientation completed"
+        - label: "Equipment-specific online training completed"
+        - label: "Attended in-person training session"
+        - label: "Read and understood equipment manual/documentation"
+        - label: "Liability waiver signed and on file"
+
+  - type: checkboxes
+    id: agreements
+    attributes:
+      label: Agreements
+      description: Please confirm the following
+      options:
+        - label: "I understand that certification may require passing a practical assessment"
+          required: true
+        - label: "I agree to follow all safety protocols and equipment guidelines"
+          required: true
+        - label: "I understand that access can be revoked for safety violations"
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        🔥 *Fire Triangle: This request relates to **OXYGEN** (governance & access control)*
+        
+        *Generated by SDCoLab Scheduler Template Generator*
+`;
+        break;
+        
+      case 'bug':
+        generated = `name: 🐛 Bug Report
+description: Report a software bug or application issue
+title: "[Bug]: "
+labels: ["bug", "status:new", "fire:fuel"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for reporting a bug!
+        Please fill out the information below to help us investigate and fix the issue.
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "🟢 Low - Minor inconvenience"
+        - "🟡 Medium - Impacts functionality"
+        - "🟠 High - Significant problem"
+        - "🔴 Critical - Blocks usage"
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser/Environment
+      description: What browser and version are you using?
+      placeholder: "e.g., Chrome 120, Safari 17, Firefox 121"
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Logs
+      description: Add screenshots or error logs if available
+      placeholder: Drag and drop images here or paste error messages...
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        🔥 *Fire Triangle: This issue relates to **FUEL** (application infrastructure)*
+        
+        *Generated by SDCoLab Scheduler Template Generator*
+`;
+        break;
+        
+      case 'feature':
+        generated = `name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "status:new", "fire:heat"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        We love hearing ideas for improving SDCoLab Scheduler! Please describe your suggestion below.
+
+  - type: checkboxes
+    id: existing-request
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues and this feature hasn't been requested
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Is it related to a frustration?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: "I would like to be able to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: "I've tried... but..."
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Expected Impact
+      description: How many users would benefit from this feature?
+      options:
+        - "Just me"
+        - "A few users"
+        - "Many users"
+        - "All users"
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups or Examples
+      description: Add any mockups, wireframes, or examples from other tools
+      placeholder: Drag and drop images here or describe the UI...
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        🔥 *Fire Triangle: This request relates to **HEAT** (community engagement & vision)*
+        
+        *Generated by SDCoLab Scheduler Template Generator*
+`;
+        break;
+    }
+    
+    setYaml(generated);
+  };
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(yaml);
+      setCopied(true);
+      showMessage?.('Template copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      showMessage?.('Failed to copy', 'error');
+    }
+  };
+  
+  const handleDownload = () => {
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${templateType}.yml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showMessage?.('Template downloaded');
+  };
+  
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className={`rounded-lg shadow p-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <FileCode className="text-blue-500" />
+          Issue Template Generator
+        </h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Generate GitHub issue templates with your current tools and rooms
+        </p>
+      </div>
+      
+      {/* Configuration */}
+      <div className={`rounded-lg shadow p-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+        <h3 className="font-semibold mb-4">Configuration</h3>
+        
+        <div className="space-y-4">
+          {/* Template type */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Template Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {templateTypes.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setTemplateType(type.id)}
+                  className={`p-3 rounded-lg border text-left transition-colors ${
+                    templateType === type.id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                      : isDark ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="font-medium">{type.name}</div>
+                  <div className="text-xs text-gray-500">🔥 {type.fire}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Include options */}
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeTools}
+                onChange={(e) => setIncludeTools(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-500"
+              />
+              <Wrench size={16} className="text-gray-500" />
+              <span>Include Tools ({tools.length})</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeRooms}
+                onChange={(e) => setIncludeRooms(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-500"
+              />
+              <DoorOpen size={16} className="text-gray-500" />
+              <span>Include Rooms ({rooms.length})</span>
+            </label>
+          </div>
+          
+          {/* Generate button */}
+          <button
+            onClick={generateTemplate}
+            disabled={loading}
+            className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <RefreshCw className="animate-spin" size={18} /> : <FileCode size={18} />}
+            Generate Template
+          </button>
+        </div>
+      </div>
+      
+      {/* Output */}
+      {yaml && (
+        <div className={`rounded-lg shadow p-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Generated YAML</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopy}
+                className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm ${
+                  copied 
+                    ? 'bg-green-500 text-white' 
+                    : isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                onClick={handleDownload}
+                className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm ${
+                  isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                <Download size={14} /> Download
+              </button>
+            </div>
+          </div>
+          
+          <pre className={`p-4 rounded-lg overflow-x-auto text-sm font-mono ${
+            isDark ? 'bg-gray-900' : 'bg-gray-50'
+          }`}>
+            {yaml}
+          </pre>
+          
+          <div className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
+            <p className="text-sm flex items-start gap-2">
+              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                Paste this file into your repository's <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700">.github/ISSUE_TEMPLATE/</code> folder.
+                The filename should match the template type (e.g., <code className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{templateType}.yml</code>).
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TemplateGenerator;

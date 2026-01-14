@@ -1,0 +1,113 @@
+# =============================================================================
+# SDCoLab Scheduler - Terraform Configuration Example
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values
+# =============================================================================
+
+# Core Settings
+aws_region   = "us-west-2"
+environment  = "dev"
+project_name = "colab-scheduler"
+
+# =============================================================================
+# DNS Configuration (Route53)
+# =============================================================================
+
+# Default deployment: sdcolab.mid.dog
+# The mid.dog zone must already exist in Route53
+
+dns_zone_name = "mid.dog"
+dns_subdomain = "sdcolab"
+manage_dns    = true
+
+# Or to deploy to a different domain:
+# dns_zone_name = "example.com"
+# dns_subdomain = "scheduler"
+# manage_dns    = true
+
+# Or to disable DNS management entirely:
+# manage_dns = false
+# domain_name = "your-custom-domain.com"  # Optional: set manually if not using dns.tf
+
+# =============================================================================
+# Feature Flags - Enable what you need
+# =============================================================================
+
+# Auth Providers
+enable_auth_email     = true
+enable_auth_google    = false
+enable_auth_microsoft = false
+enable_auth_github    = false
+enable_auth_oidc      = false
+
+# Integrations
+enable_gcal      = false
+enable_github    = false
+enable_slack     = false
+enable_email     = false
+enable_audit_log = true
+
+# =============================================================================
+# OAuth Provider Configuration (when enabled)
+# =============================================================================
+
+# Google OAuth
+# Create at: https://console.cloud.google.com/apis/credentials
+# google_client_id     = "xxx.apps.googleusercontent.com"
+# google_client_secret = "GOCSPX-xxx"
+
+# Microsoft OAuth
+# Create at: https://portal.azure.com > App registrations
+# microsoft_client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# microsoft_client_secret = "xxx"
+# microsoft_tenant_id     = "common"  # or your tenant ID
+
+# GitHub OAuth
+# Create at: https://github.com/settings/developers
+# github_oauth_client_id     = "Iv1.xxx"
+# github_oauth_client_secret = "xxx"
+
+# =============================================================================
+# Google Calendar Integration (when enabled)
+# =============================================================================
+
+# Option A: Workload Identity Federation (No keys required!)
+# gcal_auth_method           = "workload_identity"
+# gcal_project_number        = "123456789012"
+# gcal_pool_id               = "sdcolab-aws-pool"
+# gcal_provider_id           = "aws-lambda"
+# gcal_service_account_email = "scheduler-sa@your-project.iam.gserviceaccount.com"
+
+# Option B: Service Account Key (Traditional)
+# gcal_auth_method   = "service_account_key"
+# gcal_client_email  = "scheduler-sa@your-project.iam.gserviceaccount.com"
+# gcal_private_key   = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+# Calendar IDs
+# gcal_primary_calendar_id = "your-calendar@group.calendar.google.com"
+
+# =============================================================================
+# GitHub Issues Integration (when enabled)
+# =============================================================================
+
+# github_token = "ghp_xxxx"
+# github_org   = "middog"
+# github_repo  = "sdcap-governance"
+
+# =============================================================================
+# Slack Integration (when enabled)
+# =============================================================================
+
+# slack_webhook_url = "https://hooks.slack.com/services/T.../B.../xxx"
+# slack_channel     = "#colab-bookings"
+
+# =============================================================================
+# Security
+# =============================================================================
+
+# JWT secret - leave empty to auto-generate, or set your own
+# jwt_secret = "your-secure-secret-min-32-chars"
+
+# Scheduler API key for automated jobs (reminders, cert warnings)
+# Leave empty to auto-generate, or set your own
+# scheduler_api_key = "your-scheduler-api-key-min-32-chars"

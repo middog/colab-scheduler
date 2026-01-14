@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🔥 SDCoLab Fire Theme */
+:root {
+  --fire-orange: #f97316;
+  --fire-pink: #ec4899;
+  --fire-purple: #8b5cf6;
+  --fuel-yellow: #fbbf24;
+  --oxygen-blue: #3b82f6;
+  --heat-red: #ef4444;
+}
+
+/* Smooth transitions for dark mode */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode colors */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Fire gradient animation */
+@keyframes fireGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.fire-glow {
+  animation: fireGlow 2s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--fire-orange);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
