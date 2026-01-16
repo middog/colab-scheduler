@@ -1425,6 +1425,7 @@ const App = () => {
   const [navGroup, setNavGroup] = useState('oxygen');
   const [navView, setNavView] = useState('schedule');
   const [showAllTools, setShowAllTools] = useState(false); // Toggle for tender scoped view
+  const [peopleSubTab, setPeopleSubTab] = useState('approvals'); // Sub-tab for People view: 'approvals' or 'users'
   
   // Legacy view state (for backward compatibility during transition)
   const [view, setView] = useState('schedule');
@@ -2727,6 +2728,59 @@ const App = () => {
         {/* People View with Admin Functions - Moved pending approvals here */}
         {(navView === 'people' || view === 'admin' || view === 'users') && isTender(user) && (
           <div className="space-y-4">
+            {/* Sub-tab Navigation for People View */}
+            <div className={`rounded-lg shadow ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setPeopleSubTab('approvals')}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    peopleSubTab === 'approvals'
+                      ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <CheckCircle size={18} />
+                  Booking Approvals
+                  {pendingCount > 0 && (
+                    <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-orange-500 text-white">
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setPeopleSubTab('users')}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    peopleSubTab === 'users'
+                      ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Users size={18} />
+                  User Management
+                </button>
+              </div>
+            </div>
+
+            {/* Booking Approvals Sub-tab - renders AdminPanel */}
+            {peopleSubTab === 'approvals' && (
+              <AdminPanel 
+                token={null}
+                user={user}
+                theme={theme}
+                showMessage={showMessage}
+                onNavigate={(path) => {
+                  if (path.startsWith('/tools/')) {
+                    const toolId = path.split('/')[2];
+                    setSelectedTool(toolId);
+                    setNavView('schedule');
+                  }
+                }}
+              />
+            )}
+
+            {/* User Management Sub-tab */}
+            {peopleSubTab === 'users' && (
+            <>
             {/* Action Bar */}
             <div className={`rounded-lg shadow p-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
               <div className="flex flex-col md:flex-row gap-4 justify-between">
@@ -3005,6 +3059,8 @@ const App = () => {
               onSave={handleUserSave}
               onDelete={handleUserDelete}
             />
+            </>
+            )}
           </div>
         )}
 

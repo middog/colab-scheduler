@@ -1,6 +1,6 @@
 {
   "name": "colab-scheduler-api",
-  "version": "4.2.0-rc69.15",
+  "version": "4.2.0-rc69.15.1",
   "description": "SDCoLab Tool Scheduling API with certifications, resources, waitlist, recurring bookings, and analytics",
   "main": "src/index.js",
   "type": "module",
