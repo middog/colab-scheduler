@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# 🔥 SDCoLab Scheduler Deployment Script v4.2.0-rc69.12
+# 🔥 SDCoLab Scheduler Deployment Script v4.2.0-rc69.15
 # 
 # A simplified, robust deployment script with:
 # - Terraform plugin caching in ~/.terraform.d
@@ -17,7 +17,7 @@
 #   SKIP_INTERACTIVE=true ./deploy.sh  # Use defaults
 # =============================================================================
 
-VERSION="4.2.0-rc69.12"
+VERSION="4.2.0-rc69.15"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 

@@ -20,7 +20,7 @@ import IssueDetail from './IssueDetail.jsx';
  * 
  * 🔥 Fire Triangle: FUEL layer - resource maintenance tracking
  * 
- * @version 4.2.0-rc69.11
+ * @version 4.2.0-rc69.15
  */
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {

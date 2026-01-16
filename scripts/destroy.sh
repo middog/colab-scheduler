@@ -2,7 +2,7 @@
 set -e
 
 # =============================================================================
-# 🔥 SDCoLab Scheduler Destroy Script v4.2.0-rc69.10
+# 🔥 SDCoLab Scheduler Destroy Script v4.2.0-rc69.15
 # 
 # Safely tears down all AWS resources including v4.2.0 reliability infrastructure.
 #
@@ -13,7 +13,7 @@ set -e
 #   CLEAN_ORPHANS=true ./destroy.sh  # Also clean orphaned resources
 # =============================================================================
 
-VERSION="4.2.0-rc69"
+VERSION="4.2.0-rc69.15"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV=${1:-dev}

@@ -18,7 +18,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: FUEL layer - resource management
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {

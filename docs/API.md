@@ -1,6 +1,6 @@
 # 🔌 SDCoLab Scheduler API Reference
 
-**Version:** 4.2.0-rc69.11  
+**Version:** 4.2.0-rc69.13  
 **Base URL:** `https://YOUR_API_GATEWAY_URL/api`
 
 All endpoints except `/health`, `/public/*`, and `/auth/providers` require a Bearer token.
@@ -77,7 +77,7 @@ Health check endpoint.
 {
   "status": "healthy",
   "service": "SDCoLab Scheduler API",
-  "version": "4.2.0-rc69.11",
+  "version": "4.2.0-rc69.13",
   "timestamp": "2026-01-13T12:00:00.000Z",
   "features": {
     "authEmail": true,

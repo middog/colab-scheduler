@@ -3,7 +3,7 @@
  * 
  * Central export for all Zod schemas.
  * 
- * @version 4.3.0
+ * @version 4.2.0-rc69.15
  */
 
 export * as auth from './auth.js';

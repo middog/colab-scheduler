@@ -11,7 +11,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0.0"   # AWS provider for Lambda support
+      version = ">= 6.21.0"  # Required for nodejs24.x Lambda runtime support (added in 6.21.0)
     }
     random = {
       source  = "hashicorp/random"
@@ -709,12 +709,9 @@ resource "aws_lambda_function" "api" {
   function_name    = "${local.prefix}-api"
   role            = aws_iam_role.lambda.arn
   handler         = "index.handler"
-  runtime         = "nodejs20.x"
+  runtime         = "nodejs24.x"
   timeout         = 30
   memory_size     = 512
-
-  # Ensure IAM policy is fully attached before creating Lambda
-  depends_on = [aws_iam_role_policy.lambda]
 
   environment {
     variables = {
@@ -861,12 +858,9 @@ resource "aws_lambda_function" "worker" {
   function_name    = "${local.prefix}-worker"
   role             = aws_iam_role.worker[0].arn
   handler          = "worker.handler"
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs24.x"
   timeout          = 30
   memory_size      = 256
-
-  # Ensure IAM policy is fully attached before creating Lambda
-  depends_on = [aws_iam_role_policy.worker]
 
   environment {
     variables = {

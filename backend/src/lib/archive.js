@@ -8,7 +8,7 @@
  * 
  * 🔥 Fire Triangle: OXYGEN layer - data lifecycle management
  * 
- * @version 4.2.0-rc69.5
+ * @version 4.2.0-rc69.15
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';

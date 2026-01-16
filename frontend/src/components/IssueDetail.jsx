@@ -17,7 +17,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: FUEL layer - issue management
  * 
- * @version 4.2.0-rc69.11
+ * @version 4.2.0-rc69.15
  */
 
 const DRAFT_KEY_PREFIX = 'issue-draft-';

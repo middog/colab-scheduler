@@ -14,7 +14,7 @@
  * 
  * 🔥 Fire Triangle: Where Fuel + Oxygen + Heat converge
  * 
- * @version 4.2.0-rc69.8
+ * @version 4.2.0-rc69.15
  */
 
 import express from 'express';
@@ -176,7 +176,7 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy',
     service: 'SDCoLab Scheduler API',
-    version: '4.3.0',
+    version: '4.2.0-rc69.15',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000)
   });
@@ -218,7 +218,7 @@ app.get('/api/health/deep', async (req, res) => {
   res.json({
     status: 'healthy',
     service: 'SDCoLab Scheduler API',
-    version: '4.2.0',
+    version: '4.2.0-rc69.15',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000),
     features: config.features,
@@ -409,7 +409,7 @@ app.use((req, res) => {
 // =============================================================================
 
 logConfig();
-console.log('🔥 SDCoLab Scheduler v4.2.0-rc69.11 initialized');
+console.log('🔥 SDCoLab Scheduler v4.2.0-rc69.15 initialized');
 
 // Lambda handler
 export const handler = serverless(app);
@@ -418,7 +418,7 @@ export const handler = serverless(app);
 if (config.env !== 'production') {
   const PORT = config.port;
   const server = app.listen(PORT, () => {
-    console.log(`\n🔥 SDCoLab Scheduler v4.2.0-rc69.11 running on http://localhost:${PORT}`);
+    console.log(`\n🔥 SDCoLab Scheduler v4.2.0-rc69.15 running on http://localhost:${PORT}`);
     console.log(`   Environment: ${config.env}`);
     console.log(`   Health: http://localhost:${PORT}/api/health`);
     console.log(`   Readiness: http://localhost:${PORT}/api/ready`);

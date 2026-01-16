@@ -17,7 +17,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: OXYGEN layer - communication preferences
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 const NotificationPreferences = ({ token, user, theme, showMessage, onClose }) => {

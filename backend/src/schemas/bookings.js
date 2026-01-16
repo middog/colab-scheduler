@@ -3,7 +3,7 @@
  * 
  * Zod schemas for booking endpoints.
  * 
- * @version 4.3.0
+ * @version 4.2.0-rc69.15
  */
 
 import { z } from 'zod';

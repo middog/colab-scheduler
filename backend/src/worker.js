@@ -12,7 +12,7 @@
  * - email.bookingApproved
  * - email.bookingRejected
  * 
- * @version 4.2.0
+ * @version 4.2.0-rc69.15
  */
 
 import { slackService } from './integrations/slack.js';

@@ -1,6 +1,6 @@
 # 🔥 SDCoLab Scheduler
 
-**Version 4.2.0-rc69.11**
+**Version 4.2.0-rc69.13**
 
 A production-ready makerspace tool and room booking system for the San Diego Collaborative Arts Project (SDCAP) community.
 
@@ -380,7 +380,7 @@ The Fire Triangle represents the three essential elements for a thriving makersp
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### Recent: v4.2.0-rc69.11
+### Recent: v4.2.0-rc69.13
 - Idempotent API endpoints
 - Optimistic concurrency control
 - Soft-delete with 10-second undo

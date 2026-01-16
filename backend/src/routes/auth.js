@@ -6,9 +6,9 @@
  * - Google, Microsoft, GitHub OAuth
  * - Generic OIDC
  * - Password reset
- * - Session management (v4.3.0)
+ * - Session management (v4.2.0-rc69.15)
  * 
- * Security features (v4.3.0):
+ * Security features (v4.2.0-rc69.15):
  * - Server-side refresh token storage with rotation
  * - Replay attack detection
  * - Session revocation (logout, logout-all)
@@ -296,7 +296,7 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
  * POST /api/auth/refresh
  * Refresh access token with token rotation
  * 
- * Security (v4.3.0):
+ * Security (v4.2.0-rc69.15):
  * - Validates refresh token against server-side session
  * - Rotates refresh token on each use (one-time tokens)
  * - Detects and revokes on replay attacks
@@ -313,7 +313,7 @@ router.post('/refresh', async (req, res) => {
       return sendError(res, ErrorCodes.BAD_REQUEST, 'Refresh token required');
     }
     
-    // New session-based refresh (v4.3.0)
+    // New session-based refresh (v4.2.0-rc69.15)
     if (sessionIdValue) {
       const result = await rotateRefreshToken(sessionIdValue, refreshTokenValue);
       

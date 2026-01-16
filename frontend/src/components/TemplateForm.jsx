@@ -9,7 +9,7 @@ import { CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
  * 
  * 🔥 Fire Triangle: FUEL layer - issue creation interface
  * 
- * @version 4.2.0-rc69.11
+ * @version 4.2.0-rc69.15
  */
 
 const TemplateForm = ({ 

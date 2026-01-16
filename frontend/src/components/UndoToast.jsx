@@ -7,7 +7,7 @@
  * - Visual countdown
  * - Keyboard shortcut (Ctrl+Z)
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';

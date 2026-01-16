@@ -13,7 +13,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: OXYGEN layer - governance tooling
  * 
- * @version 4.2.0-rc69.11
+ * @version 4.2.0-rc69.15
  */
 
 const TemplateGenerator = ({ token, theme = 'light', showMessage }) => {

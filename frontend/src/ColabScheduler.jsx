@@ -3,11 +3,19 @@ import {
   Calendar, Wrench, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, 
   ExternalLink, LogOut, Users, Sun, Moon, HelpCircle, X, Menu,
   Mail, Github, Shield, Key, UserPlus, Activity, Download, Upload, Search, RefreshCw, Edit, Trash2,
-  Award, Settings, Bell, AlertTriangle, Hash, Zap, CalendarRange
+  Award, Settings, Bell, AlertTriangle, Hash, Zap, CalendarRange, BookOpen, Eye, EyeOff
 } from 'lucide-react';
 
 // Shared API client - handles auth, refresh, standardized responses
 import { api, setTokens, getTokens } from './lib/api.js';
+
+// Permission utilities (Fire Triangle role system)
+import { 
+  normalizeRole, getRoleDisplayName, getRoleBadgeClasses,
+  isOperator, isTender, isParticipant,
+  canManageTool, getManagedTools, hasFullToolAccess,
+  parseRouteHash, buildRouteHash, filterByToolGrants
+} from './lib/permissions.js';
 
 // Admin Components
 import CertificationManagement from './components/CertificationManagement.jsx';
@@ -18,6 +26,8 @@ import AdminPanel from './components/AdminPanel.jsx';
 import MultiSelectCalendar from './components/MultiSelectCalendar.jsx';
 import MyBookingsPanel from './components/MyBookingsPanel.jsx';
 import TemplateGenerator from './components/TemplateGenerator.jsx';
+import ClassProposalForm from './components/ClassProposalForm.jsx';
+import ToolConfiguration from './components/ToolConfiguration.jsx';
 
 // =============================================================================
 // Theme Context
@@ -102,6 +112,7 @@ const AddUserModal = ({ isOpen, onClose, onInvite, onCreate }) => {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState('member');
   const [tools, setTools] = useState([]);
   const [message, setMessage] = useState('');
@@ -127,6 +138,7 @@ const AddUserModal = ({ isOpen, onClose, onInvite, onCreate }) => {
           email,
           firstName: firstName || null,
           lastName: lastName || null,
+          phone: phone || null,
           role,
           permissions: { tools, rooms: [], capabilities: ['can_view_schedule', 'can_book'] },
           certifications: tools,
@@ -138,6 +150,7 @@ const AddUserModal = ({ isOpen, onClose, onInvite, onCreate }) => {
           email,
           firstName,
           lastName,
+          phone: phone || null,
           displayName: `${firstName} ${lastName}`.trim(),
           role,
           permissions: { tools, rooms: [], capabilities: ['can_view_schedule', 'can_book'] }
@@ -160,6 +173,7 @@ const AddUserModal = ({ isOpen, onClose, onInvite, onCreate }) => {
     setEmail('');
     setFirstName('');
     setLastName('');
+    setPhone('');
     setRole('member');
     setTools([]);
     setMessage('');
@@ -299,11 +313,21 @@ const AddUserModal = ({ isOpen, onClose, onInvite, onCreate }) => {
             onChange={(e) => setRole(e.target.value)}
             className={`w-full p-3 border rounded ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}`}
           >
-            <option value="member">Member</option>
+            <option value="member">Member (CoLabian)</option>
             <option value="certified">Certified Member</option>
+            <option value="instructor">Instructor</option>
             <option value="steward">Steward</option>
-            <option value="admin">Administrator</option>
+            <option value="admin">Admin (Dept Lead)</option>
+            <option value="superadmin">Super Admin</option>
           </select>
+          
+          <input
+            type="tel"
+            placeholder="Phone Number (optional)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className={`w-full p-3 border rounded ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}`}
+          />
           
           <div>
             <label className="block text-sm font-medium mb-2">Tool Certifications</label>
@@ -909,6 +933,88 @@ const OverlapWarningDialog = ({ isOpen, onClose, onConfirm, overlapData }) => {
 };
 
 // =============================================================================
+// Capacity Warning Modal (when time slots are at capacity)
+// =============================================================================
+
+const CapacityWarningModal = ({ isOpen, onClose, capacityData, theme, onWaitlist, onChooseDifferent }) => {
+  if (!isOpen || !capacityData) return null;
+  
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [h] = time.split(':');
+    const hour = parseInt(h);
+    return `${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'pm' : 'am'}`;
+  };
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="⚠️ Booking Capacity Reached" size="md">
+      <div className="space-y-4">
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <p className="text-yellow-800 dark:text-yellow-200">
+            Some of your selected time slots are already at full capacity for <strong>{capacityData.toolName}</strong>.
+          </p>
+        </div>
+        
+        <div>
+          <h4 className="font-medium mb-2">Full time slots:</h4>
+          <div className="flex flex-wrap gap-2">
+            {capacityData.fullSlots?.map((slot, i) => (
+              <span 
+                key={i} 
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                  theme === 'dark' ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {formatTime(slot.time)} ({slot.booked}/{slot.max} booked)
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        {capacityData.availableSlots?.length > 0 && (
+          <div>
+            <h4 className="font-medium mb-2">Available alternatives:</h4>
+            <div className="flex flex-wrap gap-2">
+              {capacityData.availableSlots.slice(0, 8).map((slot, i) => (
+                <span 
+                  key={i} 
+                  className={`px-3 py-1.5 rounded-full text-sm ${
+                    theme === 'dark' ? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700'
+                  }`}
+                >
+                  {formatTime(slot)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div className="flex flex-col gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={onChooseDifferent}
+            className="w-full bg-orange-500 text-white p-3 rounded hover:bg-orange-600"
+          >
+            Choose Different Times
+          </button>
+          <button
+            onClick={onWaitlist}
+            className={`w-full p-3 rounded border ${theme === 'dark' ? 'border-gray-600 hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+          >
+            📋 Join Waitlist for Full Slots
+          </button>
+          <button
+            onClick={onClose}
+            className={`w-full p-3 rounded text-sm ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// =============================================================================
 // Help System
 // =============================================================================
 
@@ -1314,7 +1420,15 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState([]);
   const [features, setFeatures] = useState({}); // Backend feature flags
+  
+  // Fire Triangle Navigation State
+  const [navGroup, setNavGroup] = useState('oxygen');
+  const [navView, setNavView] = useState('schedule');
+  const [showAllTools, setShowAllTools] = useState(false); // Toggle for tender scoped view
+  
+  // Legacy view state (for backward compatibility during transition)
   const [view, setView] = useState('schedule');
+  
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [bookings, setBookings] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
@@ -1370,6 +1484,15 @@ const App = () => {
   
   // Overlap warning dialog
   const [overlapWarning, setOverlapWarning] = useState(null);
+  
+  // Capacity warning dialog (when slots are full)
+  const [capacityWarning, setCapacityWarning] = useState(null);
+  
+  // Hover state for time slot range preview
+  const [hoverSlot, setHoverSlot] = useState(null);
+  
+  // Class proposal modal
+  const [classProposalOpen, setClassProposalOpen] = useState(false);
   
   // Integration health dashboard
   const [integrationHealth, setIntegrationHealth] = useState(null);
@@ -1465,7 +1588,7 @@ const App = () => {
 
   // Load all pending bookings for admin view
   const loadPendingBookings = useCallback(async () => {
-    if (!user || !['admin', 'superadmin'].includes(user.role)) return;
+    if (!user || !isTender(user)) return;
     try {
       const data = await api('/bookings/pending');
       setPendingBookings(data.bookings || []);
@@ -1474,39 +1597,60 @@ const App = () => {
     }
   }, [user]);
 
-  // Load pending bookings when user is admin
+  // Load pending bookings when user is tender or operator
   useEffect(() => {
-    if (user && ['admin', 'superadmin'].includes(user.role)) {
+    if (user && isTender(user)) {
       loadPendingBookings();
     }
   }, [user, loadPendingBookings]);
 
-  // Navigate to a view with history support
-  const navigateToView = useCallback((newView) => {
-    if (newView === view) return;
-    window.history.pushState({ view: newView }, '', `#${newView}`);
-    setView(newView);
-  }, [view]);
+  // Navigate to a view with history support (Fire Triangle grouped routes)
+  const navigateToView = useCallback((newView, group = null, viewId = null) => {
+    // Support both old format (#view) and new format (#group/view)
+    let targetGroup, targetView;
+    
+    if (group && viewId) {
+      // Called with explicit group/view (from FireTriangleNav)
+      targetGroup = group;
+      targetView = viewId;
+    } else if (newView.includes('/')) {
+      // New format: #group/view
+      const parsed = parseRouteHash(newView);
+      targetGroup = parsed.group;
+      targetView = parsed.view;
+    } else {
+      // Legacy format: #view - map to new structure
+      const parsed = parseRouteHash(newView);
+      targetGroup = parsed.group;
+      targetView = parsed.view;
+    }
+    
+    const hash = buildRouteHash(targetGroup, targetView);
+    window.history.pushState({ group: targetGroup, view: targetView }, '', hash);
+    setNavGroup(targetGroup);
+    setNavView(targetView);
+    setView(targetView); // Keep legacy view in sync
+  }, []);
 
   // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
-      const hash = window.location.hash.slice(1);
-      const validViews = ['schedule', 'mybookings', 'admin', 'users', 'activity', 'certifications', 'resources', 'issues', 'integrations'];
-      if (validViews.includes(hash)) {
-        setView(hash);
-      } else {
-        setView('schedule');
-      }
+      const hash = window.location.hash;
+      const { group, view: viewId } = parseRouteHash(hash);
+      setNavGroup(group);
+      setNavView(viewId);
+      setView(viewId); // Keep legacy view in sync
     };
 
     window.addEventListener('popstate', handlePopState);
     
     // Set initial view from hash on mount
-    const initialHash = window.location.hash.slice(1);
-    const validViews2 = ['schedule', 'mybookings', 'admin', 'users', 'activity', 'certifications', 'resources', 'issues', 'integrations'];
-    if (validViews2.includes(initialHash)) {
-      setView(initialHash);
+    const initialHash = window.location.hash;
+    if (initialHash) {
+      const { group, view: viewId } = parseRouteHash(initialHash);
+      setNavGroup(group);
+      setNavView(viewId);
+      setView(viewId);
     }
 
     return () => window.removeEventListener('popstate', handlePopState);
@@ -1528,6 +1672,40 @@ const App = () => {
       showMessage('Please select tool, time slots, and enter purpose', 'error');
       return;
     }
+    
+    // Check for capacity before submitting
+    const tool = TOOLS.find(t => t.id === selectedTool);
+    const maxConcurrent = tool?.maxConcurrent || 1;
+    const fullSlots = [];
+    const availableSlots = [];
+    
+    for (const slot of selectedSlots) {
+      const info = getSlotInfo(selectedTool, slot);
+      if (info.isFull) {
+        fullSlots.push({ time: slot, booked: info.approved, max: info.maxConcurrent });
+      }
+    }
+    
+    // Find available alternative slots if there are full slots
+    if (fullSlots.length > 0) {
+      TIME_SLOTS.slice(8, 22).forEach(slot => {
+        if (!selectedSlots.includes(slot)) {
+          const info = getSlotInfo(selectedTool, slot);
+          if (!info.isFull) {
+            availableSlots.push(slot);
+          }
+        }
+      });
+      
+      setCapacityWarning({
+        toolName: tool?.name || selectedTool,
+        fullSlots,
+        availableSlots,
+        maxConcurrent
+      });
+      return;
+    }
+    
     try {
       const response = await api('/bookings', {
         method: 'POST',
@@ -1555,6 +1733,7 @@ const App = () => {
       setRangeStart(null);
       setBookingPurpose('');
       setOverlapWarning(null);
+      setCapacityWarning(null);
       loadBookings();
     } catch (err) {
       // Check for overlap warning
@@ -1678,8 +1857,8 @@ const App = () => {
   }, [userSearch, userStatusFilter, userRoleFilter]);
   
   useEffect(() => {
-    if (view === 'users') loadUsers();
-  }, [view, loadUsers]);
+    if (navView === 'people' || view === 'users') loadUsers();
+  }, [navView, view, loadUsers]);
   
   const handleCreateUser = async (userData) => {
     const data = await api('/users', {
@@ -1790,15 +1969,15 @@ const App = () => {
   }, [user, activityCategory, activityLimit]);
   
   useEffect(() => {
-    if (view === 'activity') loadActivityLogs();
-  }, [view, loadActivityLogs]);
+    if (navView === 'activity' || view === 'activity') loadActivityLogs();
+  }, [navView, view, loadActivityLogs]);
   
   // =============================================================================
   // Integration Health Functions
   // =============================================================================
   
   const loadIntegrationHealth = useCallback(async () => {
-    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return;
+    if (!user || !isTender(user)) return;
     setIntegrationHealthLoading(true);
     try {
       const data = await api('/notifications/integrations/health');
@@ -1832,8 +2011,8 @@ const App = () => {
   };
   
   useEffect(() => {
-    if (view === 'integrations') loadIntegrationHealth();
-  }, [view, loadIntegrationHealth]);
+    if (navView === 'integrations' || view === 'integrations') loadIntegrationHealth();
+  }, [navView, view, loadIntegrationHealth]);
 
   const getSlotStatus = (toolId, time) => {
     const toolBookings = bookings.filter(b => 
@@ -1916,6 +2095,18 @@ const App = () => {
           <div className="flex items-center gap-2">
             <span className="hidden md:inline">{user.displayName || user.email}</span>
             
+            {/* Propose Class button for tenders and operators */}
+            {isTender(user) && (
+              <button 
+                onClick={() => setClassProposalOpen(true)} 
+                className="p-2 hover:bg-white/20 rounded flex items-center gap-1" 
+                title="Propose a Class"
+              >
+                <BookOpen size={20} />
+                <span className="hidden lg:inline text-sm">Propose Class</span>
+              </button>
+            )}
+            
             <button onClick={() => setNotificationPrefsOpen(true)} className="p-2 hover:bg-white/20 rounded" title="Notifications">
               <Bell size={20} />
             </button>
@@ -1925,8 +2116,8 @@ const App = () => {
             <button onClick={toggleTheme} className="p-2 hover:bg-white/20 rounded" title="Toggle theme">
               {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            {(user.role === 'admin' || user.role === 'superadmin') && (
-              <button onClick={() => navigateToView('users')} className="p-2 hover:bg-white/20 rounded" title="Users">
+            {isTender(user) && (
+              <button onClick={() => navigateToView(null, 'heat', 'people')} className="p-2 hover:bg-white/20 rounded" title="People">
                 <Users size={20} />
               </button>
             )}
@@ -1949,35 +2140,177 @@ const App = () => {
       {/* Help Drawer */}
       <HelpDrawer isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
 
-      {/* Navigation */}
+      {/* Fire Triangle Navigation */}
       <nav className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'} border-b`}>
-        <div className="max-w-7xl mx-auto flex gap-1 p-2 overflow-x-auto">
-          {[
-            { id: 'schedule', label: 'Schedule', icon: Calendar },
-            { id: 'mybookings', label: 'My Bookings', icon: Wrench },
-            ...(user.role === 'admin' || user.role === 'superadmin' ? [
-              { id: 'admin', label: `Admin${pendingCount ? ` (${pendingCount})` : ''}`, icon: CheckCircle },
-              { id: 'users', label: 'Users', icon: Users },
-              { id: 'certifications', label: 'Certs', icon: Award },
-              { id: 'resources', label: 'Resources', icon: Settings },
-              { id: 'issues', label: 'Issues', icon: AlertTriangle },
-              { id: 'integrations', label: 'Integrations', icon: Zap },
-              { id: 'activity', label: 'Activity', icon: Activity }
-            ] : [])
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => navigateToView(id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded whitespace-nowrap ${
-                view === id 
-                  ? 'bg-orange-500 text-white' 
-                  : theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-              }`}
-            >
-              <Icon size={18} />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
+        <div className="max-w-7xl mx-auto">
+          {/* Desktop: Horizontal grouped tabs */}
+          <div className="hidden md:flex items-center gap-1 p-2 overflow-x-auto">
+            {/* 🌬️ Oxygen - Everyone */}
+            <div className="flex items-center">
+              <span className={`px-2 py-1 text-xs font-medium ${
+                navGroup === 'oxygen' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'
+              }`}>🌬️</span>
+              <div className="flex">
+                {[
+                  { id: 'schedule', label: 'Schedule', icon: Calendar },
+                  { id: 'bookings', label: 'My Bookings', icon: CalendarRange },
+                  { id: 'certifications', label: 'My Certs', icon: Award }
+                ].map((route, idx, arr) => (
+                  <button
+                    key={route.id}
+                    onClick={() => navigateToView(null, 'oxygen', route.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap ${
+                      navGroup === 'oxygen' && navView === route.id
+                        ? 'bg-orange-500 text-white' 
+                        : theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100'
+                    } ${idx === arr.length - 1 ? 'rounded-r' : ''}`}
+                  >
+                    <route.icon size={16} />
+                    <span className="hidden lg:inline">{route.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 🪵 Fuel - Tenders & Operators */}
+            {isTender(user) && (
+              <>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="flex items-center">
+                  <span className={`px-2 py-1 text-xs font-medium ${
+                    navGroup === 'fuel' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'
+                  }`}>🪵</span>
+                  <div className="flex">
+                    {[
+                      { id: 'resources', label: 'Resources', icon: Settings },
+                      ...(isOperator(user) ? [{ id: 'tool-config', label: 'Tool Config', icon: Wrench }] : [])
+                    ].map((route, idx, arr) => (
+                      <button
+                        key={route.id}
+                        onClick={() => navigateToView(null, 'fuel', route.id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap ${
+                          navGroup === 'fuel' && navView === route.id
+                            ? 'bg-orange-500 text-white' 
+                            : theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100'
+                        } ${idx === arr.length - 1 ? 'rounded-r' : ''}`}
+                      >
+                        <route.icon size={16} />
+                        <span className="hidden lg:inline">{route.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 🔥 Heat - Tenders & Operators */}
+            {isTender(user) && (
+              <>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="flex items-center">
+                  <span className={`px-2 py-1 text-xs font-medium ${
+                    navGroup === 'heat' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'
+                  }`}>🔥</span>
+                  <div className="flex">
+                    {[
+                      { id: 'people', label: `People${pendingCount ? ` (${pendingCount})` : ''}`, icon: Users },
+                      { id: 'issues', label: 'Issues', icon: AlertTriangle },
+                      { id: 'activity', label: 'Activity', icon: Activity }
+                    ].map((route, idx, arr) => (
+                      <button
+                        key={route.id}
+                        onClick={() => navigateToView(null, 'heat', route.id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap ${
+                          navGroup === 'heat' && navView === route.id
+                            ? 'bg-orange-500 text-white' 
+                            : theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100'
+                        } ${idx === arr.length - 1 ? 'rounded-r' : ''}`}
+                      >
+                        <route.icon size={16} />
+                        <span className="hidden lg:inline">{route.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ⚙️ System - Operators only */}
+            {isOperator(user) && (
+              <>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+                <div className="flex items-center">
+                  <span className={`px-2 py-1 text-xs font-medium ${
+                    navGroup === 'system' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'
+                  }`}>⚙️</span>
+                  <div className="flex">
+                    {[
+                      { id: 'integrations', label: 'Integrations', icon: Zap },
+                      { id: 'templates', label: 'Templates', icon: Settings }
+                    ].map((route, idx, arr) => (
+                      <button
+                        key={route.id}
+                        onClick={() => navigateToView(null, 'system', route.id)}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap ${
+                          navGroup === 'system' && navView === route.id
+                            ? 'bg-orange-500 text-white' 
+                            : theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100'
+                        } ${idx === arr.length - 1 ? 'rounded-r' : ''}`}
+                      >
+                        <route.icon size={16} />
+                        <span className="hidden lg:inline">{route.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Scope toggle for non-full-access tenders */}
+            {isTender(user) && !hasFullToolAccess(user) && (navGroup === 'fuel' || navGroup === 'heat') && (
+              <button
+                onClick={() => setShowAllTools(!showAllTools)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded ml-auto ${
+                  showAllTools
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title={showAllTools ? 'Showing all (read-only for non-granted tools)' : 'Showing your tools only'}
+              >
+                {showAllTools ? <Eye size={16} /> : <EyeOff size={16} />}
+                <span className="hidden lg:inline">{showAllTools ? 'All' : 'Mine'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Mobile: Simplified horizontal scroll */}
+          <div className="md:hidden flex gap-1 p-2 overflow-x-auto">
+            {[
+              { group: 'oxygen', id: 'schedule', label: '📅', icon: Calendar },
+              { group: 'oxygen', id: 'bookings', label: '📋', icon: CalendarRange },
+              { group: 'oxygen', id: 'certifications', label: '🎖️', icon: Award },
+              ...(isTender(user) ? [
+                { group: 'heat', id: 'people', label: `👥${pendingCount ? `(${pendingCount})` : ''}`, icon: Users },
+                { group: 'fuel', id: 'resources', label: '⚙️', icon: Settings },
+                { group: 'heat', id: 'issues', label: '⚠️', icon: AlertTriangle },
+              ] : []),
+              ...(isOperator(user) ? [
+                { group: 'system', id: 'integrations', label: '🔌', icon: Zap },
+              ] : [])
+            ].map(route => (
+              <button
+                key={`${route.group}-${route.id}`}
+                onClick={() => navigateToView(null, route.group, route.id)}
+                className={`px-3 py-2 rounded whitespace-nowrap ${
+                  navGroup === route.group && navView === route.id
+                    ? 'bg-orange-500 text-white' 
+                    : theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                {route.label}
+              </button>
+            ))}
+          </div>
         </div>
       </nav>
 
@@ -2150,8 +2483,7 @@ const App = () => {
               <h3 className="font-semibold mb-3">Select Tool</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {TOOLS.map(tool => {
-                  const isCertified = user.role === 'admin' || 
-                    user.role === 'superadmin' || 
+                  const isCertified = isTender(user) || 
                     user.permissions?.tools?.includes(tool.id);
                   const isInMaintenance = tool.status === 'maintenance';
                   
@@ -2245,18 +2577,20 @@ const App = () => {
                     const isSelected = selectedSlots.includes(time);
                     const isRangeStart = rangeStart === time;
                     
-                    // Calculate if this slot is in the potential range (between rangeStart and hover)
-                    // For now, highlight all slots between rangeStart and current slot on hover
-                    const isInPotentialRange = rangeStart && rangeStart !== time && (() => {
+                    // Calculate if this slot is in the potential range (between rangeStart and hovered slot)
+                    const isInPotentialRange = rangeStart && hoverSlot && rangeStart !== time && (() => {
                       const startIdx = TIME_SLOTS.indexOf(rangeStart);
+                      const hoverIdx = TIME_SLOTS.indexOf(hoverSlot);
                       const currentIdx = TIME_SLOTS.indexOf(time);
-                      const [from, to] = startIdx < currentIdx ? [startIdx, currentIdx] : [currentIdx, startIdx];
+                      const [from, to] = startIdx < hoverIdx ? [startIdx, hoverIdx] : [hoverIdx, startIdx];
                       return currentIdx >= from && currentIdx <= to;
                     })();
                     
                     return (
                       <button
                         key={time}
+                        onMouseEnter={() => rangeStart && setHoverSlot(time)}
+                        onMouseLeave={() => setHoverSlot(null)}
                         onClick={() => {
                           if (status === 'full') return;
                           
@@ -2378,7 +2712,7 @@ const App = () => {
         )}
 
         {/* My Bookings View - Enhanced with Calendar and Management */}
-        {view === 'mybookings' && (
+        {(navView === 'bookings' || view === 'mybookings') && (
           <MyBookingsPanel
             bookings={myBookings}
             tools={TOOLS}
@@ -2390,26 +2724,8 @@ const App = () => {
           />
         )}
 
-        {/* Admin View - Enhanced Admin Panel */}
-        {view === 'admin' && (user.role === 'admin' || user.role === 'superadmin') && (
-          <AdminPanel
-            token={getTokens().authToken}
-            user={user}
-            theme={theme}
-            showMessage={(text, type) => setMessage({ text, type: type || 'success' })}
-            onNavigate={(action, data) => {
-              if (action === 'editBooking') {
-                setEditingBooking(data);
-                setEditBookingModalOpen(true);
-              } else if (action === 'template-generator') {
-                setView('template-generator');
-              }
-            }}
-          />
-        )}
-
-        {/* Users View - Full User Management */}
-        {view === 'users' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* People View with Admin Functions - Moved pending approvals here */}
+        {(navView === 'people' || view === 'admin' || view === 'users') && isTender(user) && (
           <div className="space-y-4">
             {/* Action Bar */}
             <div className={`rounded-lg shadow p-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
@@ -2525,10 +2841,10 @@ const App = () => {
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                                u.role === 'admin' || u.role === 'superadmin' 
+                                isOperator(u) 
                                   ? 'bg-purple-500' 
-                                  : u.role === 'steward' 
-                                    ? 'bg-blue-500' 
+                                  : isTender(u)
+                                    ? 'bg-orange-500' 
                                     : 'bg-gray-400'
                               }`}>
                                 {(u.displayName || u.email).charAt(0).toUpperCase()}
@@ -2540,15 +2856,14 @@ const App = () => {
                             </div>
                           </td>
                           <td className="p-4">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              u.role === 'superadmin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' :
-                              u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                              u.role === 'steward' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300' :
-                              u.role === 'certified' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                              'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                            }`}>
-                              {u.role}
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleBadgeClasses(u.role)}`}>
+                              {getRoleDisplayName(u.role)}
                             </span>
+                            {u.toolGrants && u.toolGrants.length > 0 && !u.toolGrants.includes('*') && (
+                              <span className="ml-1 text-xs text-gray-500">
+                                ({u.toolGrants.length} tools)
+                              </span>
+                            )}
                           </td>
                           <td className="p-4">
                             <span className={`px-2 py-1 rounded text-xs ${
@@ -2694,7 +3009,7 @@ const App = () => {
         )}
 
         {/* Activity Log View - Full Implementation */}
-        {view === 'activity' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {(navView === 'activity' || view === 'activity') && isTender(user) && (
           <div className="space-y-4">
             {/* Filters */}
             <div className={`rounded-lg shadow p-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
@@ -2892,8 +3207,8 @@ const App = () => {
           </div>
         )}
 
-        {/* Certifications View */}
-        {view === 'certifications' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* Certifications View (Oxygen group - user's own certs) */}
+        {(navView === 'certifications' || view === 'certifications') && (
           <CertificationManagement
             token={getTokens().authToken}
             user={user}
@@ -2902,11 +3217,13 @@ const App = () => {
               setMessage({ text, type: type || 'success' });
               setTimeout(() => setMessage(null), 3000);
             }}
+            viewMode={isTender(user) ? 'admin' : 'user'}
+            showAllTools={showAllTools}
           />
         )}
 
-        {/* Resources View */}
-        {view === 'resources' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* Resources View (Fuel group - Tenders & Operators) */}
+        {(navView === 'resources' || view === 'resources') && isTender(user) && (
           <ResourceManagement
             token={getTokens().authToken}
             user={user}
@@ -2915,11 +3232,13 @@ const App = () => {
               setMessage({ text, type: type || 'success' });
               setTimeout(() => setMessage(null), 3000);
             }}
+            showAllTools={showAllTools}
+            canManageTool={(toolId) => canManageTool(user, toolId)}
           />
         )}
 
-        {/* Issues View */}
-        {view === 'issues' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* Issues View (Heat group - Community) */}
+        {(navView === 'issues' || view === 'issues') && isTender(user) && (
           <IssueDashboard
             token={getTokens().authToken}
             user={user}
@@ -2931,8 +3250,8 @@ const App = () => {
           />
         )}
         
-        {/* Template Generator View */}
-        {view === 'template-generator' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* Template Generator View (System group - Operators only) */}
+        {(navView === 'templates' || view === 'template-generator') && isOperator(user) && (
           <TemplateGenerator
             token={getTokens().authToken}
             theme={theme}
@@ -2943,8 +3262,22 @@ const App = () => {
           />
         )}
         
-        {/* Integrations Health Dashboard */}
-        {view === 'integrations' && (user.role === 'admin' || user.role === 'superadmin') && (
+        {/* Tool Configuration View (Fuel group - Operators only) */}
+        {(navView === 'tool-config' || view === 'tool-config') && isOperator(user) && (
+          <div className={`rounded-lg shadow p-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+            <ToolConfiguration
+              theme={theme}
+              user={user}
+              showMessage={(text, type) => {
+                setMessage({ text, type: type || 'success' });
+                setTimeout(() => setMessage(null), 3000);
+              }}
+            />
+          </div>
+        )}
+        
+        {/* Integrations Health Dashboard (System group - Operators only) */}
+        {(navView === 'integrations' || view === 'integrations') && isOperator(user) && (
           <div className="space-y-6">
             <div className={`rounded-lg shadow p-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
               <div className="flex justify-between items-center mb-6">
@@ -3176,11 +3509,43 @@ const App = () => {
         }}
         overlapData={overlapWarning}
       />
+      
+      {/* Capacity Warning Dialog */}
+      <CapacityWarningModal
+        isOpen={!!capacityWarning}
+        onClose={() => setCapacityWarning(null)}
+        capacityData={capacityWarning}
+        theme={theme}
+        onWaitlist={() => {
+          // TODO: Implement waitlist functionality
+          setCapacityWarning(null);
+          showMessage('Waitlist feature coming soon!', 'info');
+        }}
+        onChooseDifferent={() => {
+          // Clear full slots from selection and keep available ones
+          if (capacityWarning?.fullSlots) {
+            const fullTimes = capacityWarning.fullSlots.map(s => s.time);
+            setSelectedSlots(prev => prev.filter(s => !fullTimes.includes(s)));
+          }
+          setCapacityWarning(null);
+        }}
+      />
+      
+      {/* Class Proposal Form */}
+      <ClassProposalForm
+        isOpen={classProposalOpen}
+        onClose={() => setClassProposalOpen(false)}
+        theme={theme}
+        user={user}
+        onSuccess={() => {
+          showMessage('Class proposal submitted successfully!');
+        }}
+      />
 
       {/* Footer */}
       <footer className={`mt-8 p-4 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
         <div className="flex items-center justify-center gap-4">
-          <span>🔥 SDCoLab Scheduler v4.2.0-rc69.11</span>
+          <span>🔥 SDCoLab Scheduler v4.2.0-rc69.15</span>
           <span>•</span>
           <a href="/help" className="hover:text-orange-500">Documentation</a>
           <span>•</span>

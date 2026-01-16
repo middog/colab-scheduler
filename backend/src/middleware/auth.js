@@ -4,12 +4,72 @@
  * JWT verification and role-based access control.
  * Supports both cookie-based and header-based authentication.
  * 
- * 🔥 Fire Triangle: OXYGEN layer - access control
+ * 🔥 Fire Triangle Role System:
+ *   - participant: Basic access (schedule, book, view own certs)
+ *   - tender: Tool-scoped admin (manages specific tools via toolGrants)
+ *   - operator: Full system access (integrations, templates, role management)
  */
 
 import jwt from 'jsonwebtoken';
 import { config } from '../lib/config.js';
 import { userService } from '../lib/database.js';
+
+// =============================================================================
+// Role Normalization (backward compatibility)
+// =============================================================================
+
+const ROLE_MAP = {
+  member: 'participant',
+  certified: 'participant',
+  instructor: 'participant',
+  steward: 'participant',
+  admin: 'tender',
+  superadmin: 'operator',
+  // New roles map to themselves
+  participant: 'participant',
+  tender: 'tender',
+  operator: 'operator'
+};
+
+/**
+ * Normalize legacy roles to new Fire Triangle roles
+ */
+export const normalizeRole = (role) => ROLE_MAP[role] || 'participant';
+
+/**
+ * Check if user has operator-level access (full system)
+ */
+export const isOperator = (user) => {
+  const normalized = normalizeRole(user?.role);
+  return normalized === 'operator';
+};
+
+/**
+ * Check if user has tender-level access (tool-scoped admin)
+ * Legacy admins with no toolGrants get ['*'] (all tools)
+ */
+export const isTender = (user) => {
+  const normalized = normalizeRole(user?.role);
+  return normalized === 'tender' || normalized === 'operator';
+};
+
+/**
+ * Check if user can manage a specific tool
+ * Operators can manage all tools
+ * Tenders can manage tools in their toolGrants array
+ * Legacy admins (no toolGrants) can manage all tools
+ */
+export const canManageTool = (user, toolId) => {
+  if (!user) return false;
+  if (isOperator(user)) return true;
+  if (!isTender(user)) return false;
+  
+  const grants = user.toolGrants || [];
+  // Legacy admins without toolGrants get full access
+  if (grants.length === 0 && user.role === 'admin') return true;
+  // Check for wildcard or specific tool
+  return grants.includes('*') || grants.includes(toolId);
+};
 
 /**
  * Verify JWT and attach user to request
@@ -86,22 +146,38 @@ export const optionalAuth = async (req, res, next) => {
 };
 
 /**
- * Require admin role
+ * Require tender or operator role (tool management access)
+ * Note: This grants access but tool-specific actions still need canManageTool check
  */
 export const requireAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
   
-  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (!isTender(req.user)) {
+    return res.status(403).json({ error: 'Tender or Operator access required' });
   }
   
   next();
 };
 
 /**
- * Require valid scheduler API key OR authenticated admin
+ * Require operator role (full system access)
+ */
+export const requireOperator = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!isOperator(req.user)) {
+    return res.status(403).json({ error: 'Operator access required' });
+  }
+  
+  next();
+};
+
+/**
+ * Require valid scheduler API key OR authenticated tender/operator
  * Used for scheduler endpoints that can be called by cron/Lambda or manually by admins
  */
 export const requireSchedulerKeyOrAdmin = async (req, res, next) => {
@@ -113,10 +189,10 @@ export const requireSchedulerKeyOrAdmin = async (req, res, next) => {
     return next();
   }
   
-  // Fall back to admin authentication
+  // Fall back to tender/operator authentication
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Valid API key or admin authentication required' });
+    return res.status(401).json({ error: 'Valid API key or Tender/Operator authentication required' });
   }
   
   const token = authHeader.substring(7);
@@ -133,8 +209,8 @@ export const requireSchedulerKeyOrAdmin = async (req, res, next) => {
       return res.status(403).json({ error: 'Account is not active' });
     }
     
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!isTender(user)) {
+      return res.status(403).json({ error: 'Tender or Operator access required' });
     }
     
     req.user = user;
@@ -175,13 +251,13 @@ export const requireCapability = (capability) => {
     
     const capabilities = req.user.permissions?.capabilities || [];
     
-    // Superadmin has all capabilities
-    if (req.user.role === 'superadmin') {
+    // Operators have all capabilities
+    if (isOperator(req.user)) {
       return next();
     }
     
-    // Admin has most capabilities
-    if (req.user.role === 'admin' && capability !== 'superadmin_only') {
+    // Tenders have most capabilities (except operator-only)
+    if (isTender(req.user) && capability !== 'operator_only') {
       return next();
     }
     
@@ -194,7 +270,7 @@ export const requireCapability = (capability) => {
 };
 
 /**
- * Check tool authorization
+ * Check tool authorization for booking
  */
 export const requireToolAccess = (toolIdParam = 'tool') => {
   return (req, res, next) => {
@@ -202,8 +278,8 @@ export const requireToolAccess = (toolIdParam = 'tool') => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Admins can access all tools
-    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+    // Operators and Tenders bypass tool access for booking (they manage, not necessarily use)
+    if (isTender(req.user)) {
       return next();
     }
     
@@ -228,12 +304,47 @@ export const requireToolAccess = (toolIdParam = 'tool') => {
   };
 };
 
+/**
+ * Require tool management access (for tender tool-scoped actions)
+ */
+export const requireToolManagement = (toolIdParam = 'tool') => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const toolId = req.body[toolIdParam] || req.params[toolIdParam] || req.query[toolIdParam];
+    
+    if (!toolId) {
+      return next();
+    }
+    
+    if (!canManageTool(req.user, toolId)) {
+      const tool = config.tools.find(t => t.id === toolId);
+      return res.status(403).json({ 
+        error: 'Not authorized to manage this tool',
+        tool: tool?.name || toolId,
+        message: 'You do not have management access for this tool.'
+      });
+    }
+    
+    next();
+  };
+};
+
 export default { 
   authenticate, 
   optionalAuth, 
-  requireAdmin, 
+  requireAdmin,
+  requireOperator,
   requireSchedulerKeyOrAdmin,
   requireRole, 
   requireCapability, 
-  requireToolAccess 
+  requireToolAccess,
+  requireToolManagement,
+  // Role utilities
+  normalizeRole,
+  isOperator,
+  isTender,
+  canManageTool
 };

@@ -10,7 +10,7 @@
  * 
  * 🔥 Fire Triangle: OXYGEN layer - connectivity and flow
  * 
- * @version 4.2.0
+ * @version 4.2.0-rc69.15
  */
 
 import { isFeatureEnabled } from '../lib/config.js';

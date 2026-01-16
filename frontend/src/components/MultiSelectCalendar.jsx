@@ -13,7 +13,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: OXYGEN layer - batch scheduling
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 // Generate time slots for a day (e.g., 8am to 8pm in 1-hour increments)
@@ -166,7 +166,7 @@ const MultiSelectCalendar = ({
     if (existing >= 0) {
       setSelections(prev => prev.filter((_, i) => i !== existing));
     } else {
-      const tool = tools.find(t => t.id === toolId);
+      const tool = (tools || []).find(t => t.id === toolId);
       setSelections(prev => [...prev, { 
         toolId, 
         toolName: tool?.name || toolId,
@@ -293,7 +293,7 @@ const MultiSelectCalendar = ({
               <span className={`text-sm py-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Select tools:
               </span>
-              {tools.filter(t => t.status !== 'maintenance').map(tool => (
+              {(tools || []).filter(t => t?.status !== 'maintenance').map(tool => (
                 <button
                   key={tool.id}
                   onClick={() => {
@@ -395,7 +395,7 @@ const MultiSelectCalendar = ({
                 
                 {/* For each tool */}
                 {selectedTools.map(toolId => {
-                  const tool = tools.find(t => t.id === toolId);
+                  const tool = (tools || []).find(t => t.id === toolId);
                   return (
                     <div key={toolId} className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                       {/* Tool name header */}

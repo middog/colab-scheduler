@@ -12,7 +12,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: OXYGEN layer - fair access
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 const WaitlistPanel = ({ token, user, theme, showMessage, onConvert }) => {

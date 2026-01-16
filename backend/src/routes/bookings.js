@@ -7,16 +7,17 @@
  * - Normalized API responses
  * - Soft-delete with undo support
  * - Clear conflict messaging with alternatives
+ * - Room association on booking creation
  * 
  * 🔥 Fire Triangle: FUEL layer - resource scheduling
  * 
- * @version 4.2.0-rc69.5
+ * @version 4.2.0-rc69.15
  */
 
 import { Router } from 'express';
 import { config, getToolById, isFeatureEnabled } from '../lib/config.js';
 import { bookingService, activityService } from '../lib/database.js';
-import { authenticate, requireAdmin, requireToolAccess } from '../middleware/auth.js';
+import { authenticate, requireAdmin, requireToolAccess, isTender, isOperator } from '../middleware/auth.js';
 import { integrations } from '../integrations/index.js';
 import { idempotency, idempotencyMiddleware } from '../lib/resilience.js';
 import { 
@@ -91,7 +92,7 @@ router.use(authenticate);
  */
 router.get('/', asyncHandler(async (req, res) => {
   const { date, status, admin, includeArchived } = req.query;
-  const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+  const isAdmin = isTender(req.user);
   
   let bookings;
   
@@ -287,7 +288,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   }
   
   // Users can only see their own bookings (unless admin)
-  const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+  const isAdmin = isTender(req.user);
   if (!isAdmin && booking.userEmail !== req.user.email) {
     return sendError(res, ErrorCodes.FORBIDDEN, 'Not authorized to view this booking');
   }
@@ -414,16 +415,19 @@ router.post('/',
     }
     
     // Determine auto-approval
-    const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    const isAdmin = isTender(req.user);
     const autoApprove = isAdmin;
     
-    // Create booking with version field
+    // Create booking with version field and room association
     const booking = await bookingService.create({
       tool,
       toolName: toolConfig.name,
       resourceType: 'tool',
       resourceId: tool,
       resourceName: toolConfig.name,
+      // Room association - tie tool booking to room
+      room: toolConfig.room || null,
+      roomName: toolConfig.room || null,
       date,
       startTime,
       endTime,
@@ -503,7 +507,7 @@ router.put('/:id',
     
     // Check authorization
     const isOwner = booking.userEmail === req.user.email;
-    const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    const isAdmin = isTender(req.user);
     
     if (!isOwner && !isAdmin) {
       return sendError(res, ErrorCodes.FORBIDDEN, 'Not authorized to edit this booking');
@@ -673,7 +677,7 @@ router.delete('/:id',
       return sendError(res, ErrorCodes.NOT_FOUND, 'Booking not found');
     }
     
-    const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    const isAdmin = isTender(req.user);
     if (!isAdmin && booking.userEmail !== req.user.email) {
       return sendError(res, ErrorCodes.FORBIDDEN, 'Not authorized to cancel this booking');
     }

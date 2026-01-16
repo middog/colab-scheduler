@@ -10,7 +10,7 @@
  * 
  * 🔥 Fire Triangle: FUEL layer - resource management
  * 
- * @version 4.2.0-rc69.5
+ * @version 4.2.0-rc69.15
  */
 
 import { Router } from 'express';
@@ -1004,7 +1004,7 @@ router.post('/rooms', authenticate, requireAdmin, async (req, res) => {
 
 /**
  * PUT /rooms/:id - Update a room
- * @version 4.2.0-rc69.8
+ * @version 4.2.0-rc69.15
  */
 router.put('/rooms/:id', authenticate, requireAdmin, async (req, res) => {
   try {

@@ -7,7 +7,7 @@
  * - Field-level validation
  * - Consistent error handling
  * 
- * @version 4.2.0-rc69.8
+ * @version 4.2.0-rc69.15
  */
 
 // =============================================================================

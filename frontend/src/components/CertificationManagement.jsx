@@ -17,7 +17,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: OXYGEN layer - qualification governance
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 // Modal wrapper component

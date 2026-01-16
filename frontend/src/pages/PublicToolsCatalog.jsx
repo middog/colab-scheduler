@@ -10,7 +10,7 @@ import { api } from '../lib/api.js';
  * 
  * 🔥 Fire Triangle: HEAT layer - community visibility
  * 
- * @version 4.2.0-rc69.6
+ * @version 4.2.0-rc69.15
  */
 
 const PublicToolsCatalog = () => {
