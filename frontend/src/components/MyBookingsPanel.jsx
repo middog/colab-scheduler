@@ -102,7 +102,6 @@ const MyBookingsPanel = ({
   theme, 
   onCancel, 
   onEdit, 
-  onMultiBook,
   showMessage 
 }) => {
   const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'week', 'timeline'
@@ -308,14 +307,6 @@ const MyBookingsPanel = ({
                   </button>
                 ))}
               </div>
-              
-              <button
-                onClick={() => onMultiBook?.()}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2"
-              >
-                <CalendarRange size={18} />
-                <span className="hidden sm:inline">Multi-Book</span>
-              </button>
             </div>
             
             {/* Search & Actions */}
@@ -452,12 +443,9 @@ const MyBookingsPanel = ({
               <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                 {bookings.length === 0 ? 'No bookings yet' : 'No bookings match your filters'}
               </p>
-              <button
-                onClick={() => onMultiBook?.()}
-                className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-              >
-                Book a Tool
-              </button>
+              <p className={`mt-2 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {bookings.length === 0 ? 'Head to the Schedule tab to book a tool' : 'Try adjusting your filters'}
+              </p>
             </div>
           ) : viewMode === 'list' ? (
             /* List View */

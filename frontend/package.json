@@ -1,6 +1,6 @@
 {
   "name": "colab-scheduler-frontend",
-  "version": "4.2.0-rc69.15.1",
+  "version": "4.2.0-rc69.15.2",
   "type": "module",
   "scripts": {
     "dev": "vite",

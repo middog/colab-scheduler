@@ -2720,7 +2720,6 @@ const App = () => {
             theme={theme}
             onCancel={handleCancel}
             onEdit={openEditBookingModal}
-            onMultiBook={() => setMultiSelectCalendarOpen(true)}
             showMessage={showMessage}
           />
         )}
@@ -3542,7 +3541,7 @@ const App = () => {
       {/* Multi-Select Calendar */}
       {multiSelectCalendarOpen && (
         <MultiSelectCalendar
-          token={token}
+          token={getTokens().authToken}
           user={user}
           tools={TOOLS}
           theme={theme}
